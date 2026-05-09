@@ -179,8 +179,7 @@ static int initialize_peripherals(bool fast) {
         ret = enable_rtc_pit(SENSOR_TRANSMIT_PERIOD);
         if(ret) {
             LOG_ERR("RTC PIT init failed");
-            // return ret;
-            return 0; // DO NOT COMMIT
+            return ret;
         }        
     } else {
         LOG_INF("Fast boot (wake from System off)");
