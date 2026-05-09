@@ -41,11 +41,15 @@ static K_SEM_DEFINE(adv_done, 0, 1);
 static void adv_sent(struct bt_le_ext_adv *adv,
                      struct bt_le_ext_adv_sent_info *info)
 {
+    ARG_UNUSED(adv);
+    ARG_UNUSED(info);
     k_sem_give(&adv_done);
 }
 
 static void adv_connected(struct bt_le_ext_adv *adv,
 			  struct bt_le_ext_adv_connected_info *info) {
+    ARG_UNUSED(adv);
+    ARG_UNUSED(info);
     LOG_DBG("BLE connection");
 }
 
@@ -108,6 +112,10 @@ static ssize_t write_timestamp(struct bt_conn *conn,
                         const struct bt_gatt_attr *attr,
                         const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
+    ARG_UNUSED(conn);
+    ARG_UNUSED(attr);
+    ARG_UNUSED(flags);
+
     if (offset != 0 || len != sizeof(uint32_t)) {
         return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
     }
@@ -123,6 +131,10 @@ static ssize_t write_currenttime(struct bt_conn *conn,
                         const struct bt_gatt_attr *attr,
                         const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
+    ARG_UNUSED(conn);
+    ARG_UNUSED(attr);
+    ARG_UNUSED(flags);
+
     if (offset != 0 || len != sizeof(struct cts_current_time)) {
         return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
     }
