@@ -2,6 +2,7 @@
 #include "sensor_hdc2080.h"
 #include "rtc.h"
 #include "vsense.h"
+#include "protocol.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -11,6 +12,7 @@
 #include <zephyr/bluetooth/hci_vs.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/crc.h>
 
 LOG_MODULE_REGISTER(app_ble_server, LOG_LEVEL_DBG);
 
@@ -188,16 +190,25 @@ BT_GATT_SERVICE_DEFINE(time_service,
                            read_currenttime, write_currenttime, NULL)
 );
 
-#define BEEEYE_MAGIC 0xBEEE
-struct __attribute__((packed)) ManufacturerData {
-    uint16_t            magic;
-    int16_t             temp;
-    int16_t             hum;
-    uint32_t            nextWindow;
-    uint16_t            batteryMilliVolt;
-} manufacturerData;
+struct __attribute__((packed)) ManufacturerData manufacturerData;
 
+static uint16_t next_transmission_offset = 0;
 static char name[32];
+
+int capture_timer_offset(void) {
+    uint16_t timer = 0;
+    int err = get_rtc_pit_timer_status(&timer);
+    if(err) {
+        LOG_ERR("Failed to get RTC time status: %d", err);
+        return err;
+    }
+    next_transmission_offset = 60*64 - timer; // TODO: fix hardcoded interval (take current period)
+
+    LOG_INF("capture_timer_offset %"PRIu16" (%"PRId32")", 
+        next_transmission_offset, (int32_t)next_transmission_offset * 1000 / 64);
+    return 0;
+}
+
 int set_adv_data(struct bt_le_ext_adv *adv) {
     int err = 0;
     int16_t temp = 0;
@@ -205,7 +216,8 @@ int set_adv_data(struct bt_le_ext_adv *adv) {
     uint16_t mv = 0;
     // Build manufacturer data
     if(manufacturerData.magic == 0) {
-        manufacturerData.magic = BEEEYE_MAGIC;
+        manufacturerData.magic = BEE_EYE_MAGIC;
+        manufacturerData.flags = BEE_EYE_METRIC_WEIGHT | BEE_EYE_TIMER_64HZ | BEE_EYE_BATTERY_3V3;
         err = hdc2080_get_temp_humidity_x256(&temp, &hum);
         if(err) {
             LOG_ERR("Couldn't read sensor: %d", err);
@@ -227,7 +239,11 @@ int set_adv_data(struct bt_le_ext_adv *adv) {
     if(get_rtc_pit_timer_status(&timer_status)) {
         LOG_ERR("Failed to get RTC time status");
     }
-    manufacturerData.nextWindow = ((uint64_t)timer_status) * 15625 / 1000;
+    manufacturerData.nextTransmission = timer_status + next_transmission_offset;
+
+    manufacturerData.crc = crc8((const char*)&manufacturerData, 
+        sizeof(struct ManufacturerData) - sizeof(manufacturerData.crc), 
+        0x7, 0x0, false);
 
     const struct bt_data ad[] = {
         BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -303,7 +319,7 @@ int btadv(bool pairing) {
     // Normal adv mode: advertise 4 times
     // "Pairing" adv mode: advertise for 30 seconds
     const struct bt_le_ext_adv_start_param adv_start_normal = BT_LE_EXT_ADV_START_PARAM_INIT(0,4);
-    const struct bt_le_ext_adv_start_param adv_start_pairing = BT_LE_EXT_ADV_START_PARAM_INIT(300,0);
+    const struct bt_le_ext_adv_start_param adv_start_pairing = BT_LE_EXT_ADV_START_PARAM_INIT(3000,0);
     const struct bt_le_ext_adv_start_param *adv_start = pairing ? &adv_start_pairing : &adv_start_normal;
     LOG_DBG("adv start param = {timeout=%dms, num=%d}", adv_start->timeout * 10, adv_start->num_events);
     err = bt_le_ext_adv_start(adv, adv_start);
