@@ -49,6 +49,7 @@ static void rv3028_unlock_sem(const struct device *dev)
 	k_sem_give(&data->lock);
 }
 
+#define RV3028_REG_ID                   0x28
 #define RV3028_REG_STATUS               0x0E
 #define RV3028_REG_CONTROL1             0x0F
 #define RV3028_REG_CONTROL2             0x10
@@ -65,6 +66,32 @@ static void rv3028_unlock_sem(const struct device *dev)
 #define RV3028_CONTROL2_TIE             BIT(4)
 #define RV3028_STATUS_TF                BIT(3)
 
+int rv3028_init_minimal(const struct device *dev)
+{
+    LOG_DBG("RV3028 MINIMAL INIT");
+	const struct rv3028_config *config = dev->config;
+	struct rv3028_data *data = dev->data;
+	uint8_t val;
+	int err;
+
+	k_sem_init(&data->lock, 1, 1);
+
+	if (!i2c_is_ready_dt(&config->i2c)) {
+		LOG_ERR("I2C bus not ready");
+		return -ENODEV;
+	}
+
+	err = i2c_reg_read_byte_dt(&config->i2c, RV3028_REG_ID, &val);
+	if (err) {
+		return -ENODEV;
+	}
+
+	LOG_DBG("HID: 0x%02x, VID: 0x%02x", (val & 0xF0) >> 0x04, val & 0x0F);
+
+	return 0;
+}
+
+
 int rv3028_enable_periodic_interrupt(const struct device *dev, uint8_t freq, uint16_t period) {
 
     if (freq > 3 || period > 0xFFF) {
@@ -75,121 +102,120 @@ int rv3028_enable_periodic_interrupt(const struct device *dev, uint8_t freq, uin
     int err = 0;
     rv3028_lock_sem(dev);
 
-    /*
-    1. Initialize bits TE, TIE and TF to 0. In that order, to prevent inadvertent interrupts on INT pin.
-    2. Set TRPT bit to 1 if periodic countdown is needed (Repeat Mode).
-    3. Choose the Timer Clock Frequency and write the corresponding value in the TD field.
-    4. Choose the Countdown Period based on the Timer Clock Frequency, and write the corresponding Timer
-    Value to the registers Timer Value 0 (0Ah) and Timer Value 1 (0Bh). See following table.
-    5. Set the TIE bit to 1 if you want to get a hardware interrupt on INT pin.
-    6. Set CTIE bit to 1 to enable clock output when a timer interrupt occurs. See also CLOCK OUTPUT
-    SCHEME.
-    7. Set the TIE and CLKOE bits to 1 and the FD field to 110 if you want to get the timer signal on CLKOUT.
-    8. Set the TE bit from 0 to 1 to start the Periodic Countdown Timer. The countdown starts at the rising edge of
-    the SCL signal after Bit 0 of the Address 0Fh is transferred. See subsequent Figure that shows the start
-    timing.
-     */
-
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_CONTROL1, RV3028_CONTROL1_TE, 0);
 	if (err) {
 		LOG_ERR("failed to clear RV3028_CONTROL1_TE: %d", err);
-		return err;
+		goto done;
 	}
 
 
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_CONTROL2, RV3028_CONTROL2_TIE, 0);
 	if (err) {
 		LOG_ERR("failed to clear RV3028_CONTROL2_TIE: %d", err);
-		return err;
+		goto done;
 	}
 
 
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_STATUS, RV3028_STATUS_TF, 0);
 	if (err) {
 		LOG_ERR("failed to clear RV3028_STATUS_TF: %d", err);
-		return err;
+		goto done;
 	}
 
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_CONTROL1, RV3028_CONTROL1_TRPT, RV3028_CONTROL1_TRPT);
 	if (err) {
 		LOG_ERR("failed to set RV3028_CONTROL1_TRPT: %d", err);
-		return err;
+		goto done;
 	}
 
     // 0b11 =  1/60Hz
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_CONTROL1, RV3028_CONTROL1_TD, freq);
 	if (err) {
 		LOG_ERR("failed to set RV3028_CONTROL1_TD: %d", err);
-		return err;
+		goto done;
 	}
 
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_TV0, 0xFF, period & 0xFF);
 	if (err) {
 		LOG_ERR("failed to set RV3028_REG_TV0: %d", err);
-		return err;
+		goto done;
 	}
 
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_TV1, RV3028_REG_TV1_MASK, period >> 8);
 	if (err) {
 		LOG_ERR("failed to set RV3028_REG_TV1: %d", err);
-		return err;
+		goto done;
 	}
 
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_CONTROL2, RV3028_CONTROL2_TIE, RV3028_CONTROL2_TIE);
 	if (err) {
 		LOG_ERR("failed to set RV3028_CONTROL2_TIE: %d", err);
-		return err;
+		goto done;
 	}
 
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_CONTROL1, RV3028_CONTROL1_TE, RV3028_CONTROL1_TE);
 	if (err) {
 		LOG_ERR("failed to set RV3028_CONTROL1_TE: %d", err);
-		return err;
 	}
 
+done:
     rv3028_unlock_sem(dev);
-    return 0;
+    return err;
 }
 
+int rv3028_get_tf(const struct device *dev, bool *tf) {
+    const struct rv3028_config *config = dev->config;
+    int err = 0;
+	uint8_t val;
+
+
+    rv3028_lock_sem(dev);
+    err = i2c_reg_read_byte_dt(&config->i2c, RV3028_REG_STATUS, &val);
+    rv3028_unlock_sem(dev);
+
+	if (err) {
+		LOG_ERR("failed to clear RV3028_STATUS_TF: %d", err);
+		return err;
+	} else {
+        *tf = val & RV3028_STATUS_TF;
+    }
+
+    return 0;
+}
 
 int rv3028_clear_tf(const struct device *dev) {
     const struct rv3028_config *config = dev->config;
     int err = 0;
-    rv3028_lock_sem(dev);
 
+    rv3028_lock_sem(dev);
     err = i2c_reg_update_byte_dt(&config->i2c, RV3028_REG_STATUS, RV3028_STATUS_TF, 0);
+    rv3028_unlock_sem(dev);
+
 	if (err) {
 		LOG_ERR("failed to clear RV3028_STATUS_TF: %d", err);
 		return err;
 	}
 
-    rv3028_unlock_sem(dev);
     return 0;
 }
 
 
-int rv3028_get_timer_status(const struct device *dev, uint16_t *timer_status) {
+int rv3028_get_timer_status(const struct device *dev, uint16_t *timer_status)
+{
     const struct rv3028_config *config = dev->config;
-    int err = 0;
+    uint8_t buf[2];
+    int err;
+
     rv3028_lock_sem(dev);
-    uint8_t buf[2] = {0, 0};
+    err = i2c_burst_read_dt(&config->i2c, RV3028_REG_TS0, buf, sizeof(buf));
+    rv3028_unlock_sem(dev);
 
-    err = i2c_reg_read_byte_dt(&config->i2c, RV3028_REG_TS0, buf);
-	if (err) {
-		LOG_ERR("failed to read RV3028_REG_TS0: %d", err);
-		return err;
-	}
-
-    err = i2c_reg_read_byte_dt(&config->i2c, RV3028_REG_TS1, buf + 1);
-	if (err) {
-		LOG_ERR("failed to read RV3028_REG_TS1: %d", err);
-		return err;
-	}
-
-    // LOG_DBG("RV3028_REG_TS* = [%u, %u]", buf[0], buf[1]);
+    if (err) {
+        LOG_ERR("failed to read timer status: %d", err);
+        return err;
+    }
 
     *timer_status = buf[0] | ((uint16_t)(buf[1] & RV3028_REG_TS1_MASK) << 8);
 
-    rv3028_unlock_sem(dev);
     return 0;
 }
