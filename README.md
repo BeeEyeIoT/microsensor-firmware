@@ -88,7 +88,7 @@ Sensor data is included in Manufacturer Data:
    openssl ecparam -name prime256v1 -genkey -noout -out key.pem
 
 3. Build the firmware  
-   - Use `prj-release.conf` for release builds
+   - Use `release.conf` in Extra Kconfig Fragments for release builds
 
 4. Flash the device
 
