@@ -217,7 +217,7 @@ int set_adv_data(struct bt_le_ext_adv *adv) {
     // Build manufacturer data
     if(manufacturerData.magic == 0) {
         manufacturerData.magic = BEE_EYE_MAGIC;
-        manufacturerData.flags = BEE_EYE_METRIC_WEIGHT | BEE_EYE_TIMER_64HZ | BEE_EYE_BATTERY_3V3;
+        manufacturerData.flags = BEE_EYE_METRIC_TEMPHUM | BEE_EYE_TIMER_64HZ | BEE_EYE_BATTERY_3V3;
         err = hdc2080_get_temp_humidity_x256(&temp, &hum);
         if(err) {
             LOG_ERR("Couldn't read sensor: %d", err);
