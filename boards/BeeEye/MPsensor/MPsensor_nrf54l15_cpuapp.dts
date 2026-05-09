@@ -114,6 +114,7 @@
 };
 
 &gpio1 {
+	sense-edge-mask = <(BIT(5) | BIT(11))>;
 	status = "okay";
 };
 

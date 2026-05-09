@@ -26,11 +26,11 @@ int enter_deep_sleep(void) {
 
     // Configure RTC INT wake source
     gpio_pin_configure_dt(&int_gpio, GPIO_INPUT);
-    gpio_pin_interrupt_configure_dt(&int_gpio, GPIO_INT_LEVEL_ACTIVE);
+    gpio_pin_interrupt_configure_dt(&int_gpio, GPIO_INT_EDGE_TO_ACTIVE);
 
     // Configure button wake source
     gpio_pin_configure_dt(&btn, GPIO_INPUT);
-    gpio_pin_interrupt_configure_dt(&btn, GPIO_INT_LEVEL_ACTIVE);
+    gpio_pin_interrupt_configure_dt(&btn, GPIO_INT_EDGE_TO_ACTIVE);
 
     // Deep Sleep (System OFF)
     LOG_INF("Entering deep sleep (System OFF)");
