@@ -147,6 +147,10 @@ static int initialize_peripherals(bool fast) {
     settings_subsys_init();
     settings_load();
 
+    if (fast) {
+        rtc_enable_minimal_init();
+    }
+    
     ret = rtc_init(!fast);
     if (ret) {
         LOG_ERR("RTC init failed: %d", ret);

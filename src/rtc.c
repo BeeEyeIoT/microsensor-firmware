@@ -1,4 +1,5 @@
 #include "rtc.h"
+#include "rtc_rv3028_addons.h"
 
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
@@ -24,11 +25,28 @@ int megablink(int countA, int countB, int spacing);
 
 #define RV3028_NODE    DT_NODELABEL(rv3028)
 static const struct device *rtc = DEVICE_DT_GET(RV3028_NODE);
+static bool use_minimal_init = false;
+void rtc_enable_minimal_init(void) {
+    use_minimal_init = true;
+}
 
 bool ensure_rtc(void) {
     int ret = 0;
 
-    ret = device_init(rtc);
+    if (use_minimal_init) {
+        if (rtc->state->initialized) {
+            ret = -EALREADY;
+        } else {
+            ret = rv3028_init_minimal(rtc);
+            rtc->state->init_res = ret;
+            if (ret == 0) {
+                rtc->state->initialized = true;
+            }
+        }
+    } else {
+        ret = device_init(rtc);
+    }
+
     if(ret && ret != -EALREADY) {
         LOG_ERR("RTC init failed: %d", ret);
         return false;
@@ -37,7 +55,6 @@ bool ensure_rtc(void) {
     return device_is_ready(rtc);
 }
 
-int rv3028_clear_tf(const struct device *dev);
 int rtc_init(bool setTime) {
     if (!ensure_rtc()) {
         LOG_ERR("RTC is not ready");
@@ -201,16 +218,12 @@ int set_rtc_cts_time(const struct cts_current_time *cts)
     return rtc_set_time(rtc, &rt);
 }
 
-
-#define RV3028_TD_4096HZ 0
-#define RV3028_TD_64HZ 1
-#define RV3028_TD_1HZ 2
-#define RV3028_TD_MINUTE 3
-int rv3028_enable_periodic_interrupt(const struct device *dev, uint8_t freq, uint16_t period);
-int rv3028_get_timer_status(const struct device *dev, uint16_t *timer_status);
-
 int enable_rtc_pit(uint16_t period_seconds) {
     int err;
+
+    if (period_seconds > 60) {
+        return -EINVAL;
+    }
 
     if (!ensure_rtc()) {
         LOG_ERR("RTC is not ready");
@@ -222,7 +235,7 @@ int enable_rtc_pit(uint16_t period_seconds) {
         return -ENODEV;
     }
 
-    err = rv3028_enable_periodic_interrupt(rtc, RV3028_TD_64HZ, period_seconds * 64);
+    err = rv3028_enable_periodic_interrupt(rtc, RV3028_TIMER_FREQ_64HZ, period_seconds * 64);
     if (err) {
         LOG_ERR("Failed to enable RTC PIT: %d", err);
         return err;
