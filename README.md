@@ -85,7 +85,7 @@ Sensor data is included in Manufacturer Data:
 
 2. Generate a signing key:
 
-   openssl ecparam -name prime256v1 -genkey -noout -out key.pem
+   openssl genpkey -algorithm Ed25519 -out key.pem
 
 3. Build the firmware  
    - Use `release.conf` in Extra Kconfig Fragments for release builds
