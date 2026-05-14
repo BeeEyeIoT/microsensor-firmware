@@ -55,7 +55,7 @@ void main(void)
     
     if (device_mode == 0) {
         LOG_INF("Device is in BLE mode");
-        bool pairing_mode = is_lp_wake || pair_button_is_pressed();
+        bool pairing_mode = !is_lp_wake || pair_button_is_pressed();
         if(btadv(pairing_mode)) {
             blink_and_restart(4);
             return;
