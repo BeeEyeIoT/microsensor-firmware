@@ -15,7 +15,7 @@
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/dfu/mcuboot.h>
 #include <zephyr/settings/settings.h>
-
+#include <zephyr/mgmt/mcumgr/transport/smp_bt.h>
 
 LOG_MODULE_REGISTER(app_main, LOG_LEVEL_DBG);
 
@@ -185,6 +185,15 @@ static int initialize_peripherals(bool fast) {
         LOG_INF("Fast boot (wake from System off)");
     }
 
+    if (fast) {
+        if (IS_ENABLED(CONFIG_MCUMGR_TRANSPORT_BT_DYNAMIC_SVC_REGISTRATION)) {
+            LOG_INF("Disabling GATT SMP (DFU)");
+            ret = smp_bt_unregister();
+            if (ret) {
+                LOG_ERR("smp_bt_unregister() failed: %d", ret);
+            }
+        }
+    }
 
     return 0;
 }
