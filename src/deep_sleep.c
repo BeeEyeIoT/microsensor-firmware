@@ -4,6 +4,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/logging/log_ctrl.h>
 #include <zephyr/sys/poweroff.h>
 #include <zephyr/kernel.h>
 
@@ -34,6 +35,9 @@ int enter_deep_sleep(void) {
 
     // Deep Sleep (System OFF)
     LOG_INF("Entering deep sleep (System OFF)");
+    if (IS_ENABLED(CONFIG_LOG)) {
+        log_panic();
+    }
     sys_poweroff();
 
     while (1) {

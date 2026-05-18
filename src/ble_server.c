@@ -361,7 +361,7 @@ int btadv(bool pairing) {
         LOG_WRN("bt_le_ext_adv_stop failed: %d", err);        
     }
 
-    while (le_conn_count() > 0) {
+    while (pairing && le_conn_count() > 0) {
         LOG_DBG("Waiting for BLE connection(s) to close...");
         k_msleep(200);
     }
