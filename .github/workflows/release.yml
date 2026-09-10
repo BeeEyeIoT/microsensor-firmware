@@ -1,0 +1,31 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ncs_version:
+        description: nRF Connect SDK version to build against (selects the build-base image tag)
+        required: true
+        default: v3.1.1
+      version:
+        description: 'Release version, without the leading "v" (default: CalVer YYYY.MM.DD.<run_number>)'
+        required: false
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  build:
+    uses: BeeEyeIoT/pipelines/.github/workflows/build-firmware.yml@main
+    with:
+      ncs_version: ${{ inputs.ncs_version }}
+      board: MPsensor/nrf54l15/cpuapp      
+    secrets:
+      mcuboot_key_pem: ${{ secrets.MCUBOOT_KEY_PEM }}
+
+  release:
+    needs: build
+    uses: BeeEyeIoT/pipelines/.github/workflows/release-firmware.yml@main
+    with:
+      version: ${{ inputs.version }}
