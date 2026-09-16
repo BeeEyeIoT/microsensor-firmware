@@ -75,7 +75,7 @@ struct bt_le_adv_param adv_param_pair = {
     .secondary_max_skip = 0,
     .interval_min = BT_GAP_ADV_FAST_INT_MIN_2,
     .interval_max = BT_GAP_ADV_FAST_INT_MAX_2,
-    .options = BT_LE_ADV_OPT_USE_IDENTITY | BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME
+    .options = BT_LE_ADV_OPT_USE_IDENTITY | BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_CONN
 };
 
 /* Characteristic storage */
