@@ -17,15 +17,16 @@ permissions:
 
 jobs:
   build:
-    uses: BeeEyeIoT/pipelines/.github/workflows/build-firmware.yml@v1
+    uses: BeeEyeIoT/pipelines/.github/workflows/build-firmware.yml@v3
     with:
       ncs_version: ${{ inputs.ncs_version }}
       board: MPsensor/nrf54l15/cpuapp      
+      use_sysbuild: true
     secrets:
       mcuboot_key_pem: ${{ secrets.MCUBOOT_KEY_PEM }}
 
   release:
     needs: build
-    uses: BeeEyeIoT/pipelines/.github/workflows/release-firmware.yml@v1
+    uses: BeeEyeIoT/pipelines/.github/workflows/release-firmware.yml@v3
     with:
       version: ${{ inputs.version }}
