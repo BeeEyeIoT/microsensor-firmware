@@ -1,27 +1,43 @@
 &cpuapp_rram {
 	partitions {
-		compatible = "fixed-partitions";
+		ranges;
 		#address-cells = <1>;
 		#size-cells = <1>;
 
 		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
 			label = "mcuboot";
 			reg = <0x0 DT_SIZE_K(64)>;
 		};
 
 		slot0_partition: partition@10000 {
+			compatible = "zephyr,mapped-partition";
 			label = "image-0";
 			reg = <0x10000 DT_SIZE_K(664)>;
 		};
 
 		slot1_partition: partition@b6000 {
+			compatible = "zephyr,mapped-partition";
 			label = "image-1";
 			reg = <0xb6000 DT_SIZE_K(664)>;
 		};
 
-		storage_partition: partition@15c000 {
+		zboss_nvram: partition@15c000 {
+			compatible = "zephyr,mapped-partition";
+			label = "zboss-nvram";
+			reg = <0x15c000 DT_SIZE_K(32)>;
+		};
+
+		zboss_product_config: partition@164000 {
+			compatible = "zephyr,mapped-partition";
+			label = "zboss-product-config";
+			reg = <0x164000 DT_SIZE_K(4)>;
+		};
+
+		storage_partition: partition@165000 {
+			compatible = "zephyr,mapped-partition";
 			label = "storage";
-			reg = <0x15c000 DT_SIZE_K(36)>;
+			reg = <0x165000 DT_SIZE_K(36)>;
 		};
 	};
 };

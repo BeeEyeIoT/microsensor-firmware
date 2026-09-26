@@ -1,0 +1,3 @@
+if(SB_CONFIG_BEE_BOOT_SKIP_SIGNATURE_VALIDATION)
+  set_config_bool(mcuboot CONFIG_BOOT_VALIDATE_SLOT0 n)
+endif()

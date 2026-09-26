@@ -1,5 +1,6 @@
 board:
   name: MPsensor
+  full_name: Multi-protocol Sensor
   vendor: BeeEye
   socs:
   - name: nrf54l15

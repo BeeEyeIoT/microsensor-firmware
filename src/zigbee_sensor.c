@@ -286,7 +286,7 @@ static void sensor_measure_cb(zb_bufid_t bufid)
 			&batt_pct,
 			ZB_FALSE);
 
-		LOG_INF("Battery: %u mV → %u %% (ZCL %u)", (unsigned)batt_mv,
+		LOG_DBG("Battery: %u mV → %u %% (ZCL %u)", (unsigned)batt_mv,
 			(unsigned)(batt_pct / 2), (unsigned)batt_pct);
 	} else {
 		LOG_WRN("vsense_measure_mv failed (%d)", rc);
@@ -451,27 +451,20 @@ void zigbee_sensor_start_periodic(void)
 }
 
 int zigbee_sensor_start(void) {
-	int rc = 0;
-
 	/* Register Zigbee endpoint and initialise cluster attributes. */
 	zigbee_sensor_init();
+
+	/* 1 hour aging timeout*/
+	zb_set_ed_timeout(ED_AGING_TIMEOUT_64MIN);
+
+	/* 2 minute keepalive interval */
+	zb_set_keepalive_timeout(ZB_MILLISECONDS_TO_BEACON_INTERVAL(120000));
 
 	/* Enable sleepy end-device behaviour to reduce radio-on time. */
 	zigbee_configure_sleepy_behavior(true);
 	
-	// /* the radio must be disabled between the polls to parent */
+	/* the radio must be disabled between the polls to parent */
 	zb_set_rx_on_when_idle(false);
-
-	/* Load persistent Zigbee configuration (network keys, address …). */
-	rc = settings_subsys_init();
-	if (rc) {
-		LOG_ERR("settings init failed (%d)", rc);
-	}
-
-	rc = settings_load();
-	if (rc) {
-		LOG_ERR("settings load failed (%d)", rc);
-	}
 
 	/* Start the ZBOSS thread.  All further work is driven by the
 	 * ZBOSS scheduler; main() returns after this call. */
@@ -489,29 +482,20 @@ void zboss_signal_handler(zb_bufid_t bufid)
 	zb_zdo_app_signal_type_t   sig     = zb_get_app_signal(bufid, &sig_hdr);
 	zb_ret_t                   status  = ZB_GET_APP_SIGNAL_STATUS(bufid);
 
-	switch (sig) {
-	case ZB_BDB_SIGNAL_DEVICE_FIRST_START:
+	switch (sig) {	
 	case ZB_BDB_SIGNAL_DEVICE_REBOOT:
-		if (status == RET_OK) {
-			/* Already in network from NVRAM – start sampling. */
-			zigbee_sensor_start_periodic();
-			zb_zdo_pim_set_long_poll_interval(30000U);
-		}
-		break;
-
 	case ZB_BDB_SIGNAL_STEERING:
+		ZB_ERROR_CHECK(zigbee_default_signal_handler(bufid));
 		if (status == RET_OK) {
-			/* Successfully joined a network – start sampling. */
+			zb_zdo_pim_set_long_poll_interval(SENSOR_SAMPLING_INTERVAL_MS);
 			zigbee_sensor_start_periodic();
-			zb_zdo_pim_set_long_poll_interval(30000U);
 		}
 		break;
 
 	default:
+		ZB_ERROR_CHECK(zigbee_default_signal_handler(bufid));
 		break;
-	}
-
-	ZB_ERROR_CHECK(zigbee_default_signal_handler(bufid));
+	}	
 
 	if (bufid) {
 		zb_buf_free(bufid);

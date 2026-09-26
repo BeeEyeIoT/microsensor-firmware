@@ -1,0 +1,11 @@
+source "share/sysbuild/Kconfig"
+
+config BEE_BOOT_SKIP_SIGNATURE_VALIDATION
+	bool "MCUboot: disables signature validation on boot"
+	depends on BOOTLOADER_MCUBOOT
+	help
+	  When enabled, MCUboot is built with CONFIG_BOOT_VALIDATE_SLOT0=n.
+	  This disables image signature validation on boot, reducting power drain
+	  during boot. This reduces power drain when device is wakes from System OFF
+	  mode, as image validation would otherwise happen on each and every wake.
+

@@ -1,6 +1,7 @@
 /dts-v1/;
 #include <nordic/nrf54l15_cpuapp.dtsi>
 #include "MPsensor-pinctrl.dtsi"
+#include "partition.dtsi"
 
 / {
 	model = "Multiprotocol Temperature and Humidity Sensor";
@@ -164,7 +165,7 @@
 	pinctrl-0 = <&i2c20_default>;
     pinctrl-1 = <&i2c20_sleep>;
     pinctrl-names = "default", "sleep";
-    clock-frequency = <I2C_BITRATE_FAST>;  
+    clock-frequency = <I2C_BITRATE_FAST>;
 
     /* HDC2080 temperature & humidity sensor */
     hdc2080: hdc2080@40 {
@@ -172,7 +173,7 @@
         compatible = "ti,hdc2080";
         reg = <0x40>;
         int-gpios = <&gpio1 8 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-        zephyr,deferred-init;		
+        zephyr,deferred-init;
     };
 
     /* RV-3028-C7 real-time clock */
@@ -200,9 +201,3 @@
         zephyr,resolution = <14>;                 /* 14-bit recommended */
     };
 };
-
-
-
-#include "partition.dtsi"
-
-
