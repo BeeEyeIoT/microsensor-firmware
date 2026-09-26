@@ -67,8 +67,14 @@ void main(void)
         }
     } else {
         LOG_INF("Device is in ZigBee mode");
-        zigbee_sensor_start();
-        configure_button0_as_reset();
+        ret = configure_button0_as_reset();
+        if(ret) {
+            blink_and_restart(6);
+        }
+        ret = zigbee_sensor_start();
+        if(ret) {
+            blink_and_restart(7);
+        }
     }
 
     return;
