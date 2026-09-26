@@ -22,7 +22,7 @@ jobs:
       ncs_version: ${{ inputs.ncs_version }}
       board: MPsensor/nrf54l15/cpuapp      
       use_sysbuild: true
-      extra_cmake_args: -GNinja
+      extra_cmake_args: -GNinja -DOVERLAY_CONFIG=release-overlay.conf
     secrets:
       mcuboot_key_pem: ${{ secrets.MCUBOOT_KEY_PEM }}
 
